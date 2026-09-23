@@ -69,6 +69,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uProdutoRepositoryZeos"/>
       </Unit>
+      <Unit>
+        <Filename Value="src/Model/uprodutomodel.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uProdutoModel"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -78,7 +83,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="modules/.dcp;modules/.dcu;modules;modules/github_com_hashload_horse/src;modules/github_com_hashload_jhonson/src;src/Controller;src/Service;src/Repository;src/DataModule"/>
+      <OtherUnitFiles Value="modules/.dcp;modules/.dcu;modules;modules/github_com_hashload_horse/src;modules/github_com_hashload_jhonson/src;src/Controller;src/Service;src/Repository;src/DataModule;src/Model"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>

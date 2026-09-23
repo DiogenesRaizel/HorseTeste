@@ -5,26 +5,18 @@ unit uProdutoRepository;
 interface
 
 uses
-  fpjson;
+  Classes,
+  uProdutoModel;
 
 type
   IProdutoRepository = interface
-    ['{1F3A080D-8A69-4101-9BB1-419651E34F06}']
+    ['{23F93AFE-6091-47F1-9A14-D7C780557503}']
 
-    function Listar: TJSONArray;
-
-    function Buscar(
-      AId: Integer): TJSONObject;
-
-    function Inserir(
-      AProduto: TJSONObject): TJSONObject;
-
-    function Atualizar(
-      AId: Integer;
-      AProduto: TJSONObject): TJSONObject;
-
-    function Excluir(
-      AId: Integer): Boolean;
+    function Listar: TList;
+    function Buscar(AId: Integer): TProduto;
+    function Inserir(AProduto: TProduto): TProduto;
+    function Atualizar(AId: Integer; AProduto: TProduto): TProduto;
+    function Excluir(AId: Integer): Boolean;
   end;
 
 implementation
