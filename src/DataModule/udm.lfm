@@ -1,33 +1,30 @@
 object DM: TDM
   OldCreateOrder = False
-  Height = 483
-  HorizontalOffset = 611
-  VerticalOffset = 364
-  Width = 465
+  Height = 381
+  HorizontalOffset = 439
+  VerticalOffset = 129
+  Width = 442
   object ZConnection1: TZConnection
     ControlsCodePage = cCP_UTF8
+    Properties.Strings = (
+      'RawStringEncoding=DB_CP'
+    )
     DisableSavepoints = False
     Port = 0
-    Database = 'data/HorseTeste.db'
     Protocol = 'sqlite'
-    Left = 120
-    Top = 48
-  end
-  object ZQuery1: TZQuery
-    Connection = ZConnection1
-    SQL.Strings = (
-      'SELECT id, nome, preco, estoque'
-      'FROM produtos'
-      'ORDER BY id;'
-    )
-    Params = <>
-    Left = 120
-    Top = 168
+    Left = 128
+    Top = 136
   end
   object ZTransaction1: TZTransaction
     Connection = ZConnection1
-    AutoCommit = True
-    Left = 304
-    Top = 48
+    Left = 128
+    Top = 200
+  end
+  object ZQuery1: TZQuery
+    Connection = ZConnection1
+    Transaction = ZTransaction1
+    Params = <>
+    Left = 128
+    Top = 280
   end
 end

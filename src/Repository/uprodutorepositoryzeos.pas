@@ -6,85 +6,62 @@ interface
 
 uses
   Classes,
+  SysUtils,
+  uDM,
+  ZDataset,
   uProdutoRepository,
-  uProdutoModel,
-  uDM;
+  uProdutoModel;
 
 type
-
   TProdutoRepositoryZeos = class(
     TInterfacedObject,
     IProdutoRepository
   )
   private
-    FDM: TDM;
-
-    function CriarProdutoAtual: TProduto;
+    function CriarProdutoAtual(
+      AQuery: TZQuery
+    ): TProduto;
 
     function BuscarInterno(
+      AQuery: TZQuery;
       AId: Integer
     ): TProduto;
 
-  public
-    constructor Create(
-      ADM: TDM
+    procedure LiberarLista(
+      ALista: TList
     );
 
+  public
     function Listar: TList;
-
-    function Buscar(
-      AId: Integer
-    ): TProduto;
-
-    function Inserir(
-      AProduto: TProduto
-    ): TProduto;
-
+    function Buscar(AId: Integer): TProduto;
+    function Inserir(AProduto: TProduto): TProduto;
     function Atualizar(
       AId: Integer;
       AProduto: TProduto
     ): TProduto;
-
-    function Excluir(
-      AId: Integer
-    ): Boolean;
+    function Excluir(AId: Integer): Boolean;
   end;
 
 implementation
 
-uses
-  SysUtils;
-
-constructor TProdutoRepositoryZeos.Create(
-  ADM: TDM
-);
-begin
-  inherited Create;
-
-  if ADM = nil then
-    raise EArgumentNilException.Create(
-      'DataModule nao pode ser nil'
-    );
-
-  FDM := ADM;
-end;
-
-function TProdutoRepositoryZeos.CriarProdutoAtual: TProduto;
+function TProdutoRepositoryZeos.CriarProdutoAtual(
+  AQuery: TZQuery
+): TProduto;
 begin
   Result := TProduto.Create;
 
   try
     Result.Id :=
-      FDM.ZQuery1.FieldByName('id').AsInteger;
+      AQuery.FieldByName('id').AsInteger;
 
     Result.Nome :=
-      FDM.ZQuery1.FieldByName('nome').AsString;
+      AQuery.FieldByName('nome').AsString;
 
     Result.Preco :=
-      FDM.ZQuery1.FieldByName('preco').AsCurrency;
+      AQuery.FieldByName('preco').AsCurrency;
 
     Result.Estoque :=
-      FDM.ZQuery1.FieldByName('estoque').AsInteger;
+      AQuery.FieldByName('estoque').AsInteger;
 
   except
     Result.Free;
@@ -93,53 +70,68 @@ begin
 end;
 
 function TProdutoRepositoryZeos.BuscarInterno(
+  AQuery: TZQuery;
   AId: Integer
 ): TProduto;
 begin
   Result := nil;
 
-  FDM.ZQuery1.Close;
+  AQuery.Close;
 
-  FDM.ZQuery1.SQL.Text :=
+  AQuery.SQL.Text :=
     'SELECT id, nome, preco, estoque ' +
     'FROM produtos ' +
     'WHERE id = :id';
 
-  FDM.ZQuery1.ParamByName('id').AsInteger :=
+  AQuery.ParamByName('id').AsInteger :=
     AId;
 
-  FDM.ZQuery1.Open;
+  AQuery.Open;
 
-  if FDM.ZQuery1.EOF then
+  if AQuery.EOF then
     Exit;
 
   Result :=
-    CriarProdutoAtual;
+    CriarProdutoAtual(AQuery);
+end;
+
+procedure TProdutoRepositoryZeos.LiberarLista(
+  ALista: TList
+);
+var
+  I: Integer;
+begin
+  if ALista = nil then
+    Exit;
+
+  for I := 0 to ALista.Count - 1 do
+    TObject(ALista[I]).Free;
+
+  ALista.Free;
 end;
 
 function TProdutoRepositoryZeos.Listar: TList;
 var
+  LDM: TDM;
   LProduto: TProduto;
 begin
   Result := TList.Create;
 
-  FDM.Enter;
+  LDM := TDM.Create(nil);
 
   try
     try
-      FDM.ZQuery1.Close;
-
-      FDM.ZQuery1.SQL.Text :=
+      LDM.ZQuery1.SQL.Text :=
         'SELECT id, nome, preco, estoque ' +
         'FROM produtos ' +
         'ORDER BY id';
 
-      FDM.ZQuery1.Open;
+      LDM.ZQuery1.Open;
 
-      while not FDM.ZQuery1.EOF do
+      while not LDM.ZQuery1.EOF do
       begin
         LProduto :=
-          CriarProdutoAtual;
+          CriarProdutoAtual(LDM.ZQuery1);
 
         try
           Result.Add(LProduto);
@@ -148,32 +140,38 @@ begin
           raise;
         end;
 
-        FDM.ZQuery1.Next;
+        LDM.ZQuery1.Next;
       end;
 
     except
-      Result.Free;
+      LiberarLista(Result);
+      Result := nil;
       raise;
     end;
 
   finally
-    FDM.Leave;
+    LDM.Free;
   end;
 end;
 
 function TProdutoRepositoryZeos.Buscar(
   AId: Integer
 ): TProduto;
+var
+  LDM: TDM;
 begin
   Result := nil;
 
-  FDM.Enter;
+  LDM := TDM.Create(nil);
 
   try
     Result :=
-      BuscarInterno(AId);
+      BuscarInterno(
+        LDM.ZQuery1,
+        AId
+      );
   finally
-    FDM.Leave;
+    LDM.Free;
   end;
 end;
 
@@ -181,6 +179,7 @@ function TProdutoRepositoryZeos.Inserir(
   AProduto: TProduto
 ): TProduto;
 var
+  LDM: TDM;
   LId: Integer;
 begin
   if AProduto = nil then
@@ -190,54 +189,57 @@ begin
 
   Result := nil;
 
-  FDM.Enter;
+  LDM := TDM.Create(nil);
 
   try
-    FDM.ZTransaction1.StartTransaction;
-
     try
-      FDM.ZQuery1.Close;
+      LDM.ZTransaction1.StartTransaction;
 
-      FDM.ZQuery1.SQL.Text :=
+      LDM.ZQuery1.SQL.Text :=
         'INSERT INTO produtos ' +
         '(nome, preco, estoque) ' +
         'VALUES (:nome, :preco, :estoque)';
 
-      FDM.ZQuery1.ParamByName('nome').AsString :=
+      LDM.ZQuery1.ParamByName('nome').AsString :=
         AProduto.Nome;
 
-      FDM.ZQuery1.ParamByName('preco').AsCurrency :=
+      LDM.ZQuery1.ParamByName('preco').AsCurrency :=
         AProduto.Preco;
 
-      FDM.ZQuery1.ParamByName('estoque').AsInteger :=
+      LDM.ZQuery1.ParamByName('estoque').AsFloat :=
         AProduto.Estoque;
 
-      FDM.ZQuery1.ExecSQL;
+      LDM.ZQuery1.ExecSQL;
 
-      FDM.ZQuery1.Close;
+      LDM.ZQuery1.Close;
 
-      FDM.ZQuery1.SQL.Text :=
+      LDM.ZQuery1.SQL.Text :=
         'SELECT last_insert_rowid() AS id';
 
-      FDM.ZQuery1.Open;
+      LDM.ZQuery1.Open;
 
       LId :=
-        FDM.ZQuery1.FieldByName('id').AsInteger;
+        LDM.ZQuery1.FieldByName('id').AsInteger;
 
-      FDM.ZTransaction1.Commit;
+      LDM.ZQuery1.Close;
 
-      Result :=
-        BuscarInterno(LId);
+      LDM.ZTransaction1.Commit;
 
     except
-      if FDM.ZTransaction1.Active then
-        FDM.ZTransaction1.Rollback;
+      if LDM.ZTransaction1.Active then
+        LDM.ZTransaction1.Rollback;
 
       raise;
     end;
 
+    Result :=
+      BuscarInterno(
+        LDM.ZQuery1,
+        LId
+      );
+
   finally
-    FDM.Leave;
+    LDM.Free;
   end;
 end;
 
@@ -245,6 +247,8 @@ function TProdutoRepositoryZeos.Atualizar(
   AId: Integer;
   AProduto: TProduto
 ): TProduto;
+var
+  LDM: TDM;
 begin
   if AProduto = nil then
     raise EArgumentNilException.Create(
@@ -253,97 +257,97 @@ begin
 
   Result := nil;
 
-  FDM.Enter;
+  LDM := TDM.Create(nil);
 
   try
-    FDM.ZTransaction1.StartTransaction;
-
     try
-      FDM.ZQuery1.Close;
+      LDM.ZTransaction1.StartTransaction;
 
-      FDM.ZQuery1.SQL.Text :=
+      LDM.ZQuery1.SQL.Text :=
         'UPDATE produtos ' +
         'SET nome = :nome, ' +
         '    preco = :preco, ' +
         '    estoque = :estoque ' +
         'WHERE id = :id';
 
-      FDM.ZQuery1.ParamByName('id').AsInteger :=
+      LDM.ZQuery1.ParamByName('id').AsInteger :=
         AId;
 
-      FDM.ZQuery1.ParamByName('nome').AsString :=
+      LDM.ZQuery1.ParamByName('nome').AsString :=
         AProduto.Nome;
 
-      FDM.ZQuery1.ParamByName('preco').AsCurrency :=
+      LDM.ZQuery1.ParamByName('preco').AsCurrency :=
         AProduto.Preco;
 
-      FDM.ZQuery1.ParamByName('estoque').AsInteger :=
+      LDM.ZQuery1.ParamByName('estoque').AsFloat :=
         AProduto.Estoque;
 
-      FDM.ZQuery1.ExecSQL;
+      LDM.ZQuery1.ExecSQL;
 
-      if FDM.ZQuery1.RowsAffected = 0 then
+      if LDM.ZQuery1.RowsAffected = 0 then
       begin
-        FDM.ZTransaction1.Rollback;
+        LDM.ZTransaction1.Rollback;
         Exit;
       end;
 
-      FDM.ZTransaction1.Commit;
-
-      Result :=
-        BuscarInterno(AId);
+      LDM.ZTransaction1.Commit;
 
     except
-      if FDM.ZTransaction1.Active then
-        FDM.ZTransaction1.Rollback;
+      if LDM.ZTransaction1.Active then
+        LDM.ZTransaction1.Rollback;
 
       raise;
     end;
 
+    Result :=
+      BuscarInterno(
+        LDM.ZQuery1,
+        AId
+      );
+
   finally
-    FDM.Leave;
+    LDM.Free;
   end;
 end;
 
 function TProdutoRepositoryZeos.Excluir(
   AId: Integer
 ): Boolean;
+var
+  LDM: TDM;
 begin
   Result := False;
 
-  FDM.Enter;
+  LDM := TDM.Create(nil);
 
   try
-    FDM.ZTransaction1.StartTransaction;
-
     try
-      FDM.ZQuery1.Close;
+      LDM.ZTransaction1.StartTransaction;
 
-      FDM.ZQuery1.SQL.Text :=
+      LDM.ZQuery1.SQL.Text :=
         'DELETE FROM produtos ' +
         'WHERE id = :id';
 
-      FDM.ZQuery1.ParamByName('id').AsInteger :=
+      LDM.ZQuery1.ParamByName('id').AsInteger :=
         AId;
 
-      FDM.ZQuery1.ExecSQL;
+      LDM.ZQuery1.ExecSQL;
 
       Result :=
-        FDM.ZQuery1.RowsAffected > 0;
+        LDM.ZQuery1.RowsAffected > 0;
 
-      FDM.ZTransaction1.Commit;
+      LDM.ZTransaction1.Commit;
 
     except
-      if FDM.ZTransaction1.Active then
-        FDM.ZTransaction1.Rollback;
+      if LDM.ZTransaction1.Active then
+        LDM.ZTransaction1.Rollback;
 
       raise;
     end;
 
   finally
-    FDM.Leave;
+    LDM.Free;
   end;
 end;
 
 end.
-

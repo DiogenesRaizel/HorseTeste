@@ -7,34 +7,28 @@ uses
   SysUtils,
   Horse,
   Horse.Jhonson,
-  uDM,
   uProdutoRepository,
   uProdutoRepositoryZeos,
   uProdutoService,
-  uProdutoController;
+  uProdutoController,
+  uWebController;
 
 var
-  LDM: TDM;
   LRepository: IProdutoRepository;
   LService: TProdutoService;
   LController: TProdutoController;
+  LWebController: TWebController;
 
 begin
-  LDM := nil;
   LRepository := nil;
   LService := nil;
   LController := nil;
+  LWebController := nil;
 
   try
     try
-      LDM := TDM.Create(nil);
-
-      LDM.ZConnection1.Connect;
-
-      Writeln('Banco de dados conectado.');
-
       LRepository :=
-        TProdutoRepositoryZeos.Create(LDM);
+        TProdutoRepositoryZeos.Create;
 
       LService :=
         TProdutoService.Create(
@@ -46,9 +40,13 @@ begin
           LService
         );
 
+      LWebController :=
+        TWebController.Create;
+
       THorse.Use(Jhonson);
 
       LController.RegisterRoutes;
+      LWebController.RegisterRoutes;
 
       Writeln(
         'Servidor Horse iniciado na porta 9000.'
@@ -73,11 +71,9 @@ begin
     end;
 
   finally
+    LWebController.Free;
     LController.Free;
     LService.Free;
     LRepository := nil;
-    LDM.Free;
   end;
 end.
-
-

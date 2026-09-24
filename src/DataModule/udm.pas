@@ -1,31 +1,29 @@
 unit uDM;
 
-{$MODE DELPHI}{$H+}
+{$mode ObjFPC}{$H+}
 
 interface
 
 uses
   Classes,
   SysUtils,
-  SyncObjs,
   ZConnection,
   ZDataset;
 
 type
+
+  { TDM }
 
   TDM = class(TDataModule)
     ZConnection1: TZConnection;
     ZQuery1: TZQuery;
     ZTransaction1: TZTransaction;
   private
-    FLock: TCriticalSection;
+    procedure ConfigurarConexao;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-
-    procedure Enter;
-    procedure Leave;
   end;
+
 
 implementation
 
@@ -35,26 +33,21 @@ constructor TDM.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  FLock := TCriticalSection.Create;
+  ConfigurarConexao;
+
+  ZConnection1.Connected := True;
 end;
 
-destructor TDM.Destroy;
+procedure TDM.ConfigurarConexao;
 begin
-  FLock.Free;
-
-  inherited Destroy;
-end;
-
-procedure TDM.Enter;
-begin
-  FLock.Acquire;
-end;
-
-procedure TDM.Leave;
-begin
-  FLock.Release;
+  ZConnection1.Database :=
+    ExpandFileName(
+      IncludeTrailingPathDelimiter(
+        ExtractFileDir(ParamStr(0))
+      ) +
+      '../data/HorseTeste.db'
+    );
 end;
 
 end.
-
 

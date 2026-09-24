@@ -57,14 +57,6 @@
         <UnitName Value="uProdutoRepository"/>
       </Unit>
       <Unit>
-        <Filename Value="src/DataModule/udm.pas"/>
-        <IsPartOfProject Value="True"/>
-        <ComponentName Value="DM"/>
-        <HasResources Value="True"/>
-        <ResourceBaseClass Value="DataModule"/>
-        <UnitName Value="uDM"/>
-      </Unit>
-      <Unit>
         <Filename Value="src/Repository/uprodutorepositoryzeos.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="uProdutoRepositoryZeos"/>
@@ -74,16 +66,29 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="uProdutoModel"/>
       </Unit>
+      <Unit>
+        <Filename Value="src/Controller/uwebcontroller.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="uWebController"/>
+      </Unit>
+      <Unit>
+        <Filename Value="src/DataModule/udm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="DM"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="DataModule"/>
+        <UnitName Value="uDM"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="project1"/>
+      <Filename Value="bin/HorseTeste"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="modules/.dcp;modules/.dcu;modules;modules/github_com_hashload_horse/src;modules/github_com_hashload_jhonson/src;src/Controller;src/Service;src/Repository;src/DataModule;src/Model"/>
+      <OtherUnitFiles Value="modules/.dcp;modules/.dcu;modules;modules/github_com_hashload_horse/src;modules/github_com_hashload_jhonson/src;src/Controller;src/Service;src/Repository;src/Model;src/DataModule"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>
