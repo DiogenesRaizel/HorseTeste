@@ -14,6 +14,8 @@ type
 
   EProdutoValidacao = class(Exception);
 
+  { TProdutoService }
+
   TProdutoService = class
   private
     FRepository: IProdutoRepository;
@@ -45,6 +47,8 @@ type
     function Excluir(
       AId: Integer
     ): Boolean;
+
+    function Pesquisar(const AValor: string): TList;
   end;
 
 implementation
@@ -137,6 +141,11 @@ begin
 
   Result :=
     FRepository.Excluir(AId);
+end;
+
+function TProdutoService.Pesquisar(const AValor: string): TList;
+begin
+  Result := FRepository.Pesquisar(AValor);
 end;
 
 end.

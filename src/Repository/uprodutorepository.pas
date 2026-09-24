@@ -13,6 +13,7 @@ type
     ['{23F93AFE-6091-47F1-9A14-D7C780557503}']
 
     function Listar: TList;
+    function Pesquisar(const AValor: string): TList;
     function Buscar(AId: Integer): TProduto;
     function Inserir(AProduto: TProduto): TProduto;
     function Atualizar(AId: Integer; AProduto: TProduto): TProduto;

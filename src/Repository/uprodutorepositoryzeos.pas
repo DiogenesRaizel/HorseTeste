@@ -13,6 +13,9 @@ uses
   uProdutoModel;
 
 type
+
+  { TProdutoRepositoryZeos }
+
   TProdutoRepositoryZeos = class(
     TInterfacedObject,
     IProdutoRepository
@@ -30,6 +33,29 @@ type
     procedure LiberarLista(
       ALista: TList
     );
+    {
+    function SepararValores(
+      const AValor: string
+    ): TStringList;
+
+    function MontarWhereConsulta(
+      const AValor: string;
+      out AValores: TStringList
+    ): string;
+
+    function PesquisarInterno(
+      AQuery: TZQuery;
+      const AValor: string
+    ): TList;
+     }
+    function SepararValores(
+      const ATexto: string
+    ): TStringList;
+
+    function MontarWhereConsulta(
+      const AValor: string;
+      out AValores: TStringList
+    ): string;
 
   public
     function Listar: TList;
@@ -40,6 +66,7 @@ type
       AProduto: TProduto
     ): TProduto;
     function Excluir(AId: Integer): Boolean;
+    function Pesquisar(const AValor: string): TList;
   end;
 
 implementation
@@ -110,6 +137,66 @@ begin
   ALista.Free;
 end;
 
+function TProdutoRepositoryZeos.SepararValores(
+  const ATexto: string
+): TStringList;
+var
+  I: Integer;
+begin
+  Result := TStringList.Create;
+
+  Result.Delimiter := ',';
+  Result.StrictDelimiter := True;
+  Result.DelimitedText := ATexto;
+
+  for I := Result.Count - 1 downto 0 do
+  begin
+    Result[I] := Trim(Result[I]);
+
+    if Result[I] = '' then
+      Result.Delete(I);
+  end;
+end;
+
+function TProdutoRepositoryZeos.MontarWhereConsulta(
+  const AValor: string;
+  out AValores: TStringList
+): string;
+var
+  I: Integer;
+begin
+  AValores := SepararValores(AValor);
+
+  Result := '';
+
+  for I := 0 to AValores.Count - 1 do
+  begin
+    if Result <> '' then
+      Result := Result + ' OR ';
+
+    Result :=
+      Result +
+      '(CAST(id AS TEXT) LIKE :p' + IntToStr(I) +
+      ' OR nome LIKE :p' + IntToStr(I) + ')';
+  end;
+end;
+
+{
+function TProdutoRepositoryZeos.SepararValores(const AValor: string): TStringList;
+begin
+
+end;
+
+function TProdutoRepositoryZeos.MontarWhereConsulta(const AValor: string; out AValores: TStringList): string;
+begin
+
+end;
+
+function TProdutoRepositoryZeos.PesquisarInterno(AQuery: TZQuery; const AValor: string): TList;
+begin
+
+end;
+ }
 function TProdutoRepositoryZeos.Listar: TList;
 var
   LDM: TDM;
@@ -346,6 +433,80 @@ begin
     end;
 
   finally
+    LDM.Free;
+  end;
+end;
+
+function TProdutoRepositoryZeos.Pesquisar(
+  const AValor: string
+): TList;
+var
+  LDM: TDM;
+  LProduto: TProduto;
+  LValores: TStringList;
+  LSQLWhere: string;
+  I: Integer;
+begin
+  Result := TList.Create;
+
+  LSQLWhere :=
+    MontarWhereConsulta(
+      AValor,
+      LValores
+    );
+
+  LDM := TDM.Create(nil);
+
+  try
+    try
+      LDM.ZQuery1.SQL.Text :=
+        'SELECT id, nome, preco, estoque ' +
+        'FROM produtos';
+
+      if LSQLWhere <> '' then
+        LDM.ZQuery1.SQL.Text :=
+          LDM.ZQuery1.SQL.Text +
+          ' WHERE ' + LSQLWhere;
+
+      LDM.ZQuery1.SQL.Text :=
+        LDM.ZQuery1.SQL.Text +
+        ' ORDER BY id';
+
+      for I := 0 to LValores.Count - 1 do
+      begin
+        LDM.ZQuery1.Params.ParamByName(
+          'p' + IntToStr(I)
+        ).AsString :=
+          '%' + LValores[I] + '%';
+      end;
+
+      LDM.ZQuery1.Open;
+
+      while not LDM.ZQuery1.EOF do
+      begin
+        LProduto :=
+          CriarProdutoAtual(
+            LDM.ZQuery1
+          );
+
+        try
+          Result.Add(LProduto);
+        except
+          LProduto.Free;
+          raise;
+        end;
+
+        LDM.ZQuery1.Next;
+      end;
+
+    except
+      LiberarLista(Result);
+      Result := nil;
+      raise;
+    end;
+
+  finally
+    LValores.Free;
     LDM.Free;
   end;
 end;

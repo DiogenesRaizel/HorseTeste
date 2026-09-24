@@ -221,11 +221,30 @@ begin
   LJSON := nil;
 
   try
-    LProdutos :=
-      FService.Listar;
+    //LProdutos :=
+    //  FService.Listar;
+    if Req.Query['busca'] <> '' then
+      LProdutos := FService.Pesquisar(
+      Req.Query['busca']
+      )
+    else
+      LProdutos := FService.Listar;
 
     LJSON :=
       TJSONArray.Create;
+
+if LProdutos = nil then
+begin
+  Res.Status(500).Send(
+    'Pesquisar retornou lista nil'
+  );
+  Exit;
+end;
+
+Writeln(
+  'Quantidade de produtos: ',
+  LProdutos.Count
+);
 
     for I := 0 to LProdutos.Count - 1 do
     begin
