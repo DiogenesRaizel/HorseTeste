@@ -8,6 +8,7 @@ uses
   Classes,
   SysUtils,
   Horse,
+  Horse.Commons,
   Horse.Jhonson,
   fpjson,
   uProdutoModel,
@@ -220,31 +221,32 @@ begin
   LProdutos := nil;
   LJSON := nil;
 
-  try
-    //LProdutos :=
-    //  FService.Listar;
-    if Req.Query['busca'] <> '' then
-      LProdutos := FService.Pesquisar(
-      Req.Query['busca']
+  if Req.Query['busca'] <> '' then
+    LProdutos :=
+      FService.Pesquisar(
+        Req.Query['busca']
       )
-    else
-      LProdutos := FService.Listar;
+  else
+    LProdutos :=
+      FService.Listar;
 
+  if LProdutos = nil then
+  begin
+    raise EHorseException.Create
+      .Status(THTTPStatus.InternalServerError)
+      .Error(
+        'Erro interno do servidor'
+      );
+  end;
+
+  Writeln(
+    'Quantidade de produtos: ',
+    LProdutos.Count
+  );
+
+  try
     LJSON :=
       TJSONArray.Create;
-
-if LProdutos = nil then
-begin
-  Res.Status(500).Send(
-    'Pesquisar retornou lista nil'
-  );
-  Exit;
-end;
-
-Writeln(
-  'Quantidade de produtos: ',
-  LProdutos.Count
-);
 
     for I := 0 to LProdutos.Count - 1 do
     begin
@@ -253,7 +255,9 @@ Writeln(
 
       try
         LJSON.Add(
-          ProdutoParaJSON(LProduto)
+          ProdutoParaJSON(
+            LProduto
+          )
         );
       finally
         LProduto.Free;
@@ -268,17 +272,10 @@ Writeln(
       LJSON.AsJSON
     );
 
-  except
-    on E: Exception do
-    begin
-      Res.Status(500).Send(
-        'Erro interno do servidor'
-      );
-    end;
+  finally
+    LJSON.Free;
+    LProdutos.Free;
   end;
-
-  LJSON.Free;
-  LProdutos.Free;
 end;
 
 class procedure TProdutoController.GetProduto(
@@ -326,20 +323,22 @@ begin
     Exit;
   end;
 
+  LProduto :=
+    FService.Buscar(LId);
+
+  if LProduto = nil then
+  begin
+    Res.Status(404).Send(
+      'Produto nao encontrado'
+    );
+    Exit;
+  end;
+
   try
-    LProduto :=
-      FService.Buscar(LId);
-
-    if LProduto = nil then
-    begin
-      Res.Status(404).Send(
-        'Produto nao encontrado'
-      );
-      Exit;
-    end;
-
     LJSON :=
-      ProdutoParaJSON(LProduto);
+      ProdutoParaJSON(
+        LProduto
+      );
 
     Res.ContentType(
       'application/json'
@@ -349,17 +348,10 @@ begin
       LJSON.AsJSON
     );
 
-  except
-    on E: Exception do
-    begin
-      Res.Status(500).Send(
-        'Erro interno do servidor'
-      );
-    end;
+  finally
+    LJSON.Free;
+    LProduto.Free;
   end;
-
-  LJSON.Free;
-  LProduto.Free;
 end;
 
 class procedure TProdutoController.PostProduto(
@@ -396,67 +388,64 @@ begin
   LProduto := nil;
   LJSON := nil;
 
+  LJSONEntrada :=
+    Req.Body<TJSONObject>;
+
+  if LJSONEntrada = nil then
+  begin
+    raise EHorseException.Create
+      .Status(THTTPStatus.BadRequest)
+      .Error(
+        'Corpo JSON invalido'
+      );
+  end;
+
+  LProdutoEntrada :=
+    JSONParaProduto(
+      LJSONEntrada
+    );
+
   try
     try
-      LJSONEntrada :=
-        Req.Body<TJSONObject>;
-
-      if LJSONEntrada = nil then
-      begin
-        Res.Status(400).Send(
-          'Corpo JSON invalido'
-        );
-        Exit;
-      end;
-
-      LProdutoEntrada :=
-        JSONParaProduto(
-          LJSONEntrada
-        );
-
       LProduto :=
         FService.Criar(
           LProdutoEntrada
         );
 
-      if LProduto = nil then
-      begin
-        Res.Status(500).Send(
-          'Erro interno do servidor'
-        );
-        Exit;
-      end;
-
-      LJSON :=
-        ProdutoParaJSON(
-          LProduto
-        );
-
-      Res.Status(201);
-
-      Res.ContentType(
-        'application/json'
-      );
-
-      Res.Send(
-        LJSON.AsJSON
-      );
-
     except
       on E: EProdutoValidacao do
       begin
-        Res.Status(400).Send(
-          E.Message
-        );
-      end;
-
-      on E: Exception do
-      begin
-        Res.Status(500).Send(
-          'Erro interno do servidor'
-        );
+        raise EHorseException.Create
+          .Status(THTTPStatus.BadRequest)
+          .Error(
+            E.Message
+          );
       end;
     end;
+
+    if LProduto = nil then
+    begin
+      raise EHorseException.Create
+        .Status(THTTPStatus.InternalServerError)
+        .Error(
+          'Erro interno do servidor'
+        );
+    end;
+
+    LJSON :=
+      ProdutoParaJSON(
+        LProduto
+      );
+
+    Res.Status(201);
+
+    Res.ContentType(
+      'application/json'
+    );
+
+    Res.Send(
+      LJSON.AsJSON
+    );
 
   finally
     LJSON.Free;
@@ -514,68 +503,64 @@ begin
     Exit;
   end;
 
+  LJSONEntrada :=
+    Req.Body<TJSONObject>;
+
+  if LJSONEntrada = nil then
+  begin
+    raise EHorseException.Create
+      .Status(THTTPStatus.BadRequest)
+      .Error(
+        'Corpo JSON invalido'
+      );
+  end;
+
+  LProdutoEntrada :=
+    JSONParaProduto(
+      LJSONEntrada
+    );
+
   try
     try
-      LJSONEntrada :=
-        Req.Body<TJSONObject>;
-
-      if LJSONEntrada = nil then
-      begin
-        Res.Status(400).Send(
-          'Corpo JSON invalido'
-        );
-        Exit;
-      end;
-
-      LProdutoEntrada :=
-        JSONParaProduto(
-          LJSONEntrada
-        );
-
       LProduto :=
         FService.Atualizar(
           LId,
           LProdutoEntrada
         );
 
-      if LProduto = nil then
-      begin
-        Res.Status(404).Send(
-          'Produto nao encontrado'
-        );
-        Exit;
-      end;
-
-      LJSON :=
-        ProdutoParaJSON(
-          LProduto
-        );
-
-      Res.Status(200);
-
-      Res.ContentType(
-        'application/json'
-      );
-
-      Res.Send(
-        LJSON.AsJSON
-      );
-
     except
       on E: EProdutoValidacao do
       begin
-        Res.Status(400).Send(
-          E.Message
-        );
-      end;
-
-      on E: Exception do
-      begin
-        Res.Status(500).Send(
-          'Erro interno do servidor'
-        );
+        raise EHorseException.Create
+          .Status(THTTPStatus.BadRequest)
+          .Error(
+            E.Message
+          );
       end;
     end;
+
+    if LProduto = nil then
+    begin
+      Res.Status(404).Send(
+        'Produto nao encontrado'
+      );
+      Exit;
+    end;
+
+    LJSON :=
+      ProdutoParaJSON(
+        LProduto
+      );
+
+    Res.Status(200);
+
+    Res.ContentType(
+      'application/json'
+    );
+
+    Res.Send(
+      LJSON.AsJSON
+    );
 
   finally
     LJSON.Free;
@@ -636,11 +621,13 @@ begin
     Res.Status(204);
 
   except
-    on E: Exception do
+    on E: EProdutoValidacao do
     begin
-      Res.Status(500).Send(
-        'Erro interno do servidor'
-      );
+      raise EHorseException.Create
+        .Status(THTTPStatus.BadRequest)
+        .Error(
+          E.Message
+        );
     end;
   end;
 end;
@@ -675,4 +662,14 @@ end;
 
 end.
 
+Também ajustei os três erros internos que já estavam usando o mesmo padrão JSON manual:
 
+.Error(
+  '{"error":"Erro interno do servidor"}'
+);
+
+para:
+
+.Error(
+  'Erro interno do servidor'
+);

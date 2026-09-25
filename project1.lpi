@@ -96,6 +96,9 @@
         <DebugInfoType Value="dsDwarf3"/>
       </Debugging>
     </Linking>
+    <Other>
+      <CustomOptions Value="-dUseCThreads -dHORSE_PROVIDER_EPOLL"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions>
